@@ -311,7 +311,6 @@ resources:
           fixed_subnet: ""
           api_pool_id: ""
           etcd_pool_id: ""
-          auth_url: {get_param: auth_url}
           username: {get_param: username}
           password: {get_param: password}
           tenant_name: {get_param: tenant_name}
@@ -322,6 +321,10 @@ resources:
           http_proxy: {get_param: http_proxy}
           https_proxy: {get_param: https_proxy}
           no_proxy: {get_param: no_proxy}
+          trustee_user_id: {get_param: trustee_user_id}
+          trustee_password: {get_param: trustee_password}
+          trust_id: {get_param: trust_id}
+          auth_url: {get_param: auth_url}
 
   ######################################################################
   #
@@ -371,6 +374,10 @@ resources:
           http_proxy: {get_param: http_proxy}
           https_proxy: {get_param: https_proxy}
           no_proxy: {get_param: no_proxy}
+          trustee_user_id: {get_param: trustee_user_id}
+          trustee_password: {get_param: trustee_password}
+          trust_id: {get_param: trust_id}
+          auth_url: {get_param: auth_url}
 
 outputs:
 
