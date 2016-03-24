@@ -216,10 +216,6 @@ parameters:
       service.
     default: 6443
 
-  user_token:
-    type: string
-    description: token used for communicating back to Magnum for TLS certs
-
   bay_uuid:
     type: string
     description: identifier for the bay this template is generating
@@ -304,7 +300,6 @@ resources:
           flannel_use_vxlan: {get_param: flannel_use_vxlan}
           portal_network_cidr: {get_param: portal_network_cidr}
           discovery_url: {get_param: discovery_url}
-          user_token: {get_param: user_token}
           bay_uuid: {get_param: bay_uuid}
           magnum_url: {get_param: magnum_url}
           fixed_network: ""
@@ -365,7 +360,6 @@ resources:
           registry_container: {get_param: registry_container}
           registry_insecure: {get_param: registry_insecure}
           registry_chunksize: {get_param: registry_chunksize}
-          user_token: {get_param: user_token}
           bay_uuid: {get_param: bay_uuid}
           magnum_url: {get_param: magnum_url}
           kubernetes_port: {get_param: kubernetes_port}

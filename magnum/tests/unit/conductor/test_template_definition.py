@@ -208,8 +208,7 @@ class AtomicK8sTemplateDefinitionTestCase(base.TestCase):
             'flannel_network_subnetlen': flannel_vxlan,
             'username': 'fake_user',
             'tenant_name': 'fake_tenant',
-            'magnum_url': mock_osc.magnum_url.return_value,
-            'user_token': mock_context.auth_token}}
+            'magnum_url': mock_osc.magnum_url.return_value}}
         mock_get_params.assert_called_once_with(mock_context, mock_baymodel,
                                                 mock_bay, **expected_kwargs)
 
@@ -260,7 +259,6 @@ class AtomicK8sTemplateDefinitionTestCase(base.TestCase):
             'username': 'fake_user',
             'tenant_name': 'fake_tenant',
             'magnum_url': mock_osc.magnum_url.return_value,
-            'user_token': mock_context.auth_token,
             'loadbalancing_protocol': 'HTTP',
             'kubernetes_port': 8080}}
         mock_get_params.assert_called_once_with(mock_context, mock_baymodel,
@@ -426,7 +424,6 @@ class AtomicSwarmTemplateDefinitionTestCase(base.TestCase):
 
         expected_kwargs = {'extra_params': {
             'discovery_url': 'fake_discovery_url',
-            'user_token': mock_context.auth_token,
             'magnum_url': mock_osc.magnum_url.return_value,
             'flannel_network_cidr': flannel_cidr,
             'flannel_use_vxlan': flannel_subnet,
