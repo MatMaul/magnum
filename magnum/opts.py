@@ -59,4 +59,6 @@ def list_opts():
                             local_cert_manager.local_cert_manager_opts,
                             )),
         ('baymodel', magnum.api.validation.baymodel_opts),
+        ('docker_registry',
+         magnum.conductor.template_definition.docker_registry_opts)
     ]

@@ -175,6 +175,7 @@ class AtomicK8sTemplateDefinitionTestCase(base.TestCase):
         mock_context.auth_token = 'AUTH_TOKEN'
         mock_baymodel = mock.MagicMock()
         mock_baymodel.tls_disabled = False
+        mock_baymodel.registry_enabled = False
         mock_bay = mock.MagicMock()
         mock_bay.uuid = 'bay-xx-xx-xx-xx'
         del mock_bay.stack_id
@@ -225,6 +226,7 @@ class AtomicK8sTemplateDefinitionTestCase(base.TestCase):
         mock_context.auth_token = 'AUTH_TOKEN'
         mock_baymodel = mock.MagicMock()
         mock_baymodel.tls_disabled = True
+        mock_baymodel.registry_enabled = False
         mock_bay = mock.MagicMock()
         mock_bay.uuid = 'bay-xx-xx-xx-xx'
         del mock_bay.stack_id

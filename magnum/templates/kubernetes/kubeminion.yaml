@@ -93,34 +93,7 @@ parameters:
     description: port of registry service
     default: 5000
 
-  registry_username:
-    type: string
-    description: username used by docker registry
-    default: "username"
-
-  registry_password:
-    type: string
-    description: password used by docker registry
-    default: "password"
-    hidden: true
-
-  registry_domain:
-    type: string
-    description: domain used by docker registry
-    default: "domain"
-
-  registry_trust_id:
-    type: string
-    description: trust_id used by docker registry
-    default: "trust_id"
-    hidden: true
-
-  registry_auth_url:
-    type: string
-    description: auth_url for keystone
-    default: "auth_url"
-
-  registry_region:
+  swift_region:
     type: string
     description: region of swift service
     default: "region"
@@ -162,10 +135,18 @@ parameters:
     description: no proxies for docker
     default: ""
 
+  trustee_domain_id:
+    type: string
+    description: domain id of the trustee
+
   trustee_user_id:
     type: string
     description: user id of the trustee
     default: ""
+
+  trustee_username:
+    type: string
+    description: username of the trustee
 
   trustee_password:
     type: string
@@ -218,12 +199,7 @@ resources:
             $NETWORK_DRIVER: {get_param: network_driver}
             $REGISTRY_ENABLED: {get_param: registry_enabled}
             $REGISTRY_PORT: {get_param: registry_port}
-            $REGISTRY_AUTH_URL: {get_param: registry_auth_url}
-            $REGISTRY_REGION: {get_param: registry_region}
-            $REGISTRY_USERNAME: {get_param: registry_username}
-            $REGISTRY_PASSWORD: {get_param: registry_password}
-            $REGISTRY_DOMAIN: {get_param: registry_domain}
-            $REGISTRY_TRUST_ID: {get_param: registry_trust_id}
+            $SWIFT_REGION: {get_param: swift_region}
             $REGISTRY_CONTAINER: {get_param: registry_container}
             $REGISTRY_INSECURE: {get_param: registry_insecure}
             $REGISTRY_CHUNKSIZE: {get_param: registry_chunksize}
@@ -234,7 +210,9 @@ resources:
             $HTTPS_PROXY: {get_param: https_proxy}
             $NO_PROXY: {get_param: no_proxy}
             $WAIT_CURL: {get_attr: [minion_wait_handle, curl_cli]}
+            $TRUSTEE_DOMAIN_ID: {get_param: trustee_domain_id}
             $TRUSTEE_USER_ID: {get_param: trustee_user_id}
+            $TRUSTEE_USERNAME: {get_param: trustee_username}
             $TRUSTEE_PASSWORD: {get_param: trustee_password}
             $TRUST_ID: {get_param: trust_id}
             $AUTH_URL: {get_param: auth_url}
