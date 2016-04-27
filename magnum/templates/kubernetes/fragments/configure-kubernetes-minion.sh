@@ -42,4 +42,5 @@ cat >> /etc/environment <<EOF
 KUBERNETES_MASTER=$KUBE_MASTER_URI
 EOF
 
-hostname `hostname | sed 's/.novalocal//'`
+hostnamectl set-hostname `hostname | sed 's/.novalocal//'`
+echo "preserve_hostname: true" > /etc/cloud/cloud.cfg.d/99_hostname.cfg

@@ -162,7 +162,7 @@ resources:
 
   master_wait_condition:
     type: OS::Heat::WaitCondition
-    depends_on: kube_master
+    depends_on: kube-master
     properties:
       handle: {get_resource: master_wait_handle}
       timeout: {get_param: wait_condition_timeout}
@@ -179,12 +179,12 @@ resources:
       group: ungrouped
       config:
         str_replace:
-          template: {get_file: fragments/write-heat-params-master.yaml}
+          template: {get_file: fragments/write-heat-params-master.sh}
           params:
             "$KUBE_API_PUBLIC_ADDRESS": {get_param: api_public_address}
             "$KUBE_API_PRIVATE_ADDRESS": {get_param: api_private_address}
             "$KUBE_API_PORT": {get_param: kubernetes_port}
-            "$KUBE_NODE_IP": {get_attr: [kube_master_eth0, fixed_ips, 0, ip_address]}
+            "$KUBE_NODE_IP":
             "$KUBE_ALLOW_PRIV": {get_param: kube_allow_priv}
             "$DOCKER_VOLUME": {get_resource: docker_volume}
             "$NETWORK_DRIVER": {get_param: network_driver}
@@ -321,6 +321,12 @@ resources:
       group: ungrouped
       config: {get_file: fragments/add-proxy.sh}
 
+  install_cern_certs:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      group: ungrouped
+      config: {get_file: fragments/install-cern-certs.sh}
+
   kube_master_init:
     type: OS::Heat::MultipartMime
     properties:
@@ -343,6 +349,7 @@ resources:
         - config: {get_resource: enable_kube_proxy}
         - config: {get_resource: kube_ui_service}
         - config: {get_resource: kube_examples}
+        - config: {get_resource: install_cern_certs}
         - config: {get_resource: master_wc_notify}
 
   ######################################################################
@@ -350,7 +357,7 @@ resources:
   # a single kubernetes master.
   #
 
-  kube_master:
+  kube-master:
     type: OS::Nova::Server
     properties:
       image: {get_param: server_image}
@@ -359,38 +366,7 @@ resources:
       user_data_format: RAW
       user_data: {get_resource: kube_master_init}
       networks:
-        - port: {get_resource: kube_master_eth0}
-
-  kube_master_eth0:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_param: fixed_network}
-      security_groups:
-        - {get_param: secgroup_base_id}
-        - {get_param: secgroup_kube_master_id}
-      fixed_ips:
-        - subnet: {get_param: fixed_subnet}
-      replacement_policy: AUTO
-
-  kube_master_floating:
-    type: OS::Neutron::FloatingIP
-    properties:
-      floating_network: {get_param: external_network}
-      port_id: {get_resource: kube_master_eth0}
-
-  api_pool_member:
-    type: OS::Neutron::PoolMember
-    properties:
-      pool_id: {get_param: api_pool_id}
-      address: {get_attr: [kube_master_eth0, fixed_ips, 0, ip_address]}
-      protocol_port: {get_param: kubernetes_port}
-
-  etcd_pool_member:
-    type: OS::Neutron::PoolMember
-    properties:
-      pool_id: {get_param: etcd_pool_id}
-      address: {get_attr: [kube_master_eth0, fixed_ips, 0, ip_address]}
-      protocol_port: 2379
+        - network: {get_param: external_network}
 
   ######################################################################
   #
@@ -406,14 +382,14 @@ resources:
   docker_volume_attach:
     type: OS::Cinder::VolumeAttachment
     properties:
-      instance_uuid: {get_resource: kube_master}
+      instance_uuid: {get_resource: kube-master}
       volume_id: {get_resource: docker_volume}
       mountpoint: /dev/vdb
 
 outputs:
 
   kube_master_ip:
-    value: {get_attr: [kube_master_eth0, fixed_ips, 0, ip_address]}
+    value: {get_attr: [kube-master, networks, {get_param: external_network}, 0]}
 
   kube_master_external_ip:
-    value: {get_attr: [kube_master_floating, floating_ip_address]}
+    value: {get_attr: [kube-master, networks, {get_param: external_network}, 0]}

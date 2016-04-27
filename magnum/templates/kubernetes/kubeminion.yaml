@@ -195,7 +195,7 @@ resources:
             $KUBE_ALLOW_PRIV: {get_param: kube_allow_priv}
             $KUBE_MASTER_IP: {get_param: kube_master_ip}
             $KUBE_API_PORT: {get_param: kubernetes_port}
-            $KUBE_NODE_IP: {get_attr: [kube_minion_eth0, fixed_ips, 0, ip_address]}
+            $KUBE_NODE_IP:
             $ETCD_SERVER_IP: {get_param: etcd_server_ip}
             $DOCKER_VOLUME: {get_resource: docker_volume}
             $NETWORK_DRIVER: {get_param: network_driver}
@@ -223,7 +223,12 @@ resources:
     type: OS::Heat::SoftwareConfig
     properties:
       group: ungrouped
-      config: {get_file: fragments/write-kubeconfig.yaml}
+      config:
+        str_replace:
+          template: {get_file: fragments/write-kubeconfig.yaml}
+          params:
+            $KUBE_MASTER_IP: {get_param: kube_master_ip}
+            $KUBE_API_PORT: {get_param: kubernetes_port}
 
   make_cert:
     type: OS::Heat::SoftwareConfig
@@ -309,6 +314,12 @@ resources:
       group: ungrouped
       config: {get_file: fragments/add-proxy.sh}
 
+  install_cern_certs:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      group: ungrouped
+      config: {get_file: fragments/install-cern-certs.sh}
+
   kube_minion_init:
     type: OS::Heat::MultipartMime
     properties:
@@ -327,6 +338,7 @@ resources:
         - config: {get_resource: enable_services}
         - config: {get_resource: enable_kube_proxy}
         - config: {get_resource: enable_docker_registry}
+        - config: {get_resource: install_cern_certs}
         - config: {get_resource: minion_wc_notify}
 
   ######################################################################
@@ -349,23 +361,7 @@ resources:
       user_data_format: RAW
       user_data: {get_resource: kube_minion_init}
       networks:
-        - port: {get_resource: kube_minion_eth0}
-
-  kube_minion_eth0:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_param: fixed_network}
-      security_groups:
-        - get_param: secgroup_kube_minion_id
-      fixed_ips:
-        - subnet: {get_param: fixed_subnet}
-      replacement_policy: AUTO
-
-  kube_minion_floating:
-    type: OS::Neutron::FloatingIP
-    properties:
-      floating_network: {get_param: external_network}
-      port_id: {get_resource: kube_minion_eth0}
+        - network: {get_param: external_network}
 
   ######################################################################
   #
@@ -388,10 +384,10 @@ resources:
 outputs:
 
   kube_minion_ip:
-    value: {get_attr: [kube_minion_eth0, fixed_ips, 0, ip_address]}
+    value: {get_attr: [kube-minion, networks, {get_param: external_network}, 0]}
 
   kube_minion_external_ip:
-    value: {get_attr: [kube_minion_floating, floating_ip_address]}
+    value: {get_attr: [kube-minion, networks, {get_param: external_network}, 0]}
 
   OS::stack_id:
-    value: {get_attr: [kube_minion_eth0, fixed_ips, 0, ip_address]}
+    value: {get_attr: [kube-minion, networks, {get_param: external_network}, 0]}

@@ -181,109 +181,6 @@ resources:
 
   ######################################################################
   #
-  # network resources.  allocate a network and router for our server.
-  # it would also be possible to take advantage of existing network
-  # resources (and have the deployer provide network and subnet ids,
-  # etc, as parameters), but I wanted to minmize the amount of
-  # configuration necessary to make this go.
-
-  fixed_network:
-    type: "OS::Neutron::Net"
-
-  # This is the subnet on which we will deploy our server.
-  fixed_subnet:
-    type: "OS::Neutron::Subnet"
-    properties:
-      cidr: {get_param: fixed_network_cidr}
-      network_id:
-        get_resource: fixed_network
-      dns_nameservers:
-        - get_param: dns_nameserver
-
-  # create a router attached to the external network provided as a
-  # parameter to this stack.
-  extrouter:
-    type: "OS::Neutron::Router"
-    properties:
-      external_gateway_info:
-        network:
-          get_param: external_network
-
-  # attached fixed_subnet to our extrouter router.
-  extrouter_inside:
-    type: "OS::Neutron::RouterInterface"
-    properties:
-      router_id:
-        get_resource: extrouter
-      subnet_id:
-        get_resource:
-          fixed_subnet
-
-  ######################################################################
-  #
-  # security groups.  we need to permit network traffic of various
-  # sorts.
-  #
-
-  secgroup_manager:
-    type: "OS::Neutron::SecurityGroup"
-    properties:
-      rules:
-        - protocol: icmp
-        - protocol: tcp
-        - protocol: udp
-
-  ######################################################################
-  #
-  # load balancers.
-  #
-
-  api_monitor:
-    type: OS::Neutron::HealthMonitor
-    properties:
-      type: TCP
-      delay: 5
-      max_retries: 5
-      timeout: 5
-
-  api_pool:
-    type: OS::Neutron::Pool
-    properties:
-      protocol: {get_param: loadbalancing_protocol}
-      monitors: [{get_resource: api_monitor}]
-      subnet: {get_resource: fixed_subnet}
-      lb_method: ROUND_ROBIN
-      vip:
-        protocol_port: {get_param: swarm_port}
-
-  api_pool_floating:
-    type: OS::Neutron::FloatingIP
-    depends_on:
-      - extrouter_inside
-    properties:
-      floating_network: {get_param: external_network}
-      port_id: {get_attr: [api_pool, vip, port_id]}
-
-  etcd_monitor:
-    type: OS::Neutron::HealthMonitor
-    properties:
-      type: TCP
-      delay: 5
-      max_retries: 5
-      timeout: 5
-
-  etcd_pool:
-    type: OS::Neutron::Pool
-    properties:
-      protocol: HTTP
-      monitors: [{get_resource: etcd_monitor}]
-      subnet: {get_resource: fixed_subnet}
-      lb_method: ROUND_ROBIN
-      vip:
-        protocol_port: 2379
-
-  ######################################################################
-  #
   # Swarm manager is responsible for the entire cluster and manages the
   # resources of multiple Docker hosts at scale.
   # It supports high availability by create a primary manager and multiple
@@ -291,8 +188,6 @@ resources:
 
   swarm_masters:
     type: "OS::Heat::ResourceGroup"
-    depends_on:
-      - extrouter_inside
     properties:
       count: {get_param: number_of_masters}
       resource_def:
@@ -302,34 +197,34 @@ resources:
           server_image: {get_param: server_image}
           server_flavor: {get_param: master_flavor}
           docker_volume_size: {get_param: docker_volume_size}
-          fixed_network_id: {get_resource: fixed_network}
-          fixed_subnet_id: {get_resource: fixed_subnet}
+          fixed_network_id: ""
+          fixed_subnet_id: ""
           external_network: {get_param: external_network}
           discovery_url: {get_param: discovery_url}
           http_proxy: {get_param: http_proxy}
           https_proxy: {get_param: https_proxy}
           no_proxy: {get_param: no_proxy}
-          swarm_api_ip: {get_attr: [api_pool, vip, address]}
+          swarm_api_ip: ""
           bay_uuid: {get_param: bay_uuid}
           user_token: {get_param: user_token}
           magnum_url: {get_param: magnum_url}
           tls_disabled: {get_param: tls_disabled}
-          secgroup_swarm_master_id: {get_resource: secgroup_manager}
+          secgroup_swarm_master_id: ""
           network_driver: {get_param: network_driver}
           flannel_network_cidr: {get_param: flannel_network_cidr}
           flannel_network_subnetlen: {get_param: flannel_network_subnetlen}
           flannel_use_vxlan: {get_param: flannel_use_vxlan}
           swarm_port: {get_param: swarm_port}
-          api_pool_id: {get_resource: api_pool}
-          etcd_pool_id: {get_resource: etcd_pool}
-          etcd_server_ip: {get_attr: [etcd_pool, vip, address]}
-          api_ip_address: {get_attr: [api_pool_floating, floating_ip_address]}
+          api_pool_id: ""
+          etcd_pool_id: ""
+          etcd_server_ip: ""
+          api_ip_address: ""
           swarm_version: {get_param: swarm_version}
 
   swarm_nodes:
     type: "OS::Heat::ResourceGroup"
     depends_on:
-      - extrouter_inside
+      - swarm_masters
     properties:
       count: {get_param: number_of_nodes}
       resource_def:
@@ -339,22 +234,22 @@ resources:
           server_image: {get_param: server_image}
           server_flavor: {get_param: node_flavor}
           docker_volume_size: {get_param: docker_volume_size}
-          fixed_network_id: {get_resource: fixed_network}
-          fixed_subnet_id: {get_resource: fixed_subnet}
+          fixed_network_id: ""
+          fixed_subnet_id: ""
           external_network: {get_param: external_network}
           discovery_url: {get_param: discovery_url}
           http_proxy: {get_param: http_proxy}
           https_proxy: {get_param: https_proxy}
           no_proxy: {get_param: no_proxy}
-          swarm_api_ip: {get_attr: [api_pool, vip, address]}
+          swarm_api_ip: {get_attr: [swarm_masters, swarm_master_external_ip, 0]}
           bay_uuid: {get_param: bay_uuid}
           user_token: {get_param: user_token}
           magnum_url: {get_param: magnum_url}
           tls_disabled: {get_param: tls_disabled}
-          secgroup_swarm_node_id: {get_resource: secgroup_manager}
+          secgroup_swarm_node_id: ""
           network_driver: {get_param: network_driver}
-          etcd_server_ip: {get_attr: [etcd_pool, vip, address]}
-          api_ip_address: {get_attr: [api_pool_floating, floating_ip_address]}
+          etcd_server_ip: {get_attr: [swarm_masters, swarm_master_external_ip, 0]}
+          api_ip_address: {get_attr: [swarm_masters, swarm_master_external_ip, 0]}
           swarm_version: {get_param: swarm_version}
 
 outputs:
@@ -362,28 +257,19 @@ outputs:
   api_address:
     value:
       str_replace:
-        template: api_ip_address
+        template: tcp://api_ip:api_port
         params:
-          api_ip_address: {get_attr: [api_pool_floating, floating_ip_address]}
+          api_ip: {get_attr: [swarm_masters, swarm_master_external_ip, 0]}
+          api_port: {get_param: swarm_port}
     description: >
       This is the API endpoint of the Swarm masters. Use this to access
       the Swarm API server from outside the cluster.
-
-  swarm_masters_private:
-    value: {get_attr: [swarm_masters, swarm_master_ip]}
-    description: >
-      This is a list of the "private" addresses of all the Swarm masters.
 
   swarm_masters:
     value: {get_attr: [swarm_masters, swarm_master_external_ip]}
     description: >
       This is a list of "public" ip addresses of all Swarm masters.
       Use these addresses to log into the Swarm masters via ssh.
-
-  swarm_nodes_private:
-    value: {get_attr: [swarm_nodes, swarm_node_ip]}
-    description: >
-      This is a list of the "private" addresses of all the Swarm nodes.
 
   swarm_nodes:
     value: {get_attr: [swarm_nodes, swarm_node_external_ip]}

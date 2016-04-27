@@ -101,7 +101,7 @@ resources:
   node_cloud_init_wait_condition:
     type: "AWS::CloudFormation::WaitCondition"
     depends_on:
-      - swarm_node
+      - swarm-node
     properties:
       Handle:
         get_resource: node_cloud_init_wait_handle
@@ -113,7 +113,7 @@ resources:
   node_agent_wait_condition:
     type: "AWS::CloudFormation::WaitCondition"
     depends_on:
-      - swarm_node
+      - swarm-node
     properties:
       Handle:
         get_resource: node_agent_wait_handle
@@ -129,7 +129,7 @@ resources:
       group: ungrouped
       config:
         str_replace:
-          template: {get_file: fragments/write-heat-params.yaml}
+          template: {get_file: fragments/write-heat-params.sh}
           params:
             "$WAIT_HANDLE": {get_resource: node_cloud_init_wait_handle}
             "$DOCKER_VOLUME": {get_resource: docker_volume}
@@ -137,7 +137,7 @@ resources:
             "$HTTPS_PROXY": {get_param: https_proxy}
             "$NO_PROXY": {get_param: no_proxy}
             "$SWARM_API_IP": {get_param: swarm_api_ip}
-            "$SWARM_NODE_IP": {get_attr: [swarm_node_eth0, fixed_ips, 0, ip_address]}
+            "$SWARM_NODE_IP":
             "$BAY_UUID": {get_param: bay_uuid}
             "$USER_TOKEN": {get_param: user_token}
             "$MAGNUM_URL": {get_param: magnum_url}
@@ -229,6 +229,12 @@ resources:
       group: ungrouped
       config: {get_file: fragments/add-proxy.sh}
 
+  install_cern_certs:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      group: ungrouped
+      config: {get_file: fragments/install-cern-certs.sh}
+
   swarm_node_init:
     type: "OS::Heat::MultipartMime"
     properties:
@@ -245,9 +251,10 @@ resources:
         - config: {get_resource: write_docker_socket}
         - config: {get_resource: add_proxy}
         - config: {get_resource: enable_services}
+        - config: {get_resource: install_cern_certs}
         - config: {get_resource: cfn_signal}
 
-  swarm_node:
+  swarm-node:
     type: "OS::Nova::Server"
     properties:
       image:
@@ -259,27 +266,7 @@ resources:
       user_data_format: RAW
       user_data: {get_resource: swarm_node_init}
       networks:
-        - port:
-            get_resource: swarm_node_eth0
-
-  swarm_node_eth0:
-    type: "OS::Neutron::Port"
-    properties:
-      network_id:
-        get_param: fixed_network_id
-      security_groups:
-        - {get_param: secgroup_swarm_node_id}
-      fixed_ips:
-        - subnet_id:
-            get_param: fixed_subnet_id
-
-  swarm_node_floating:
-    type: "OS::Neutron::FloatingIP"
-    properties:
-      floating_network:
-        get_param: external_network
-      port_id:
-        get_resource: swarm_node_eth0
+        - network: {get_param: external_network}
 
   ######################################################################
   #
@@ -295,18 +282,19 @@ resources:
   docker_volume_attach:
     type: OS::Cinder::VolumeAttachment
     properties:
-      instance_uuid: {get_resource: swarm_node}
+      instance_uuid: {get_resource: swarm-node}
       volume_id: {get_resource: docker_volume}
       mountpoint: /dev/vdb
 
 outputs:
 
   swarm_node_ip:
-    value: {get_attr: [swarm_node_eth0, fixed_ips, 0, ip_address]}
+    value: {get_attr: [swarm-node, networks, {get_param: external_network}, 0]}
     description: >
       This is the "private" address of the Swarm node.
 
   swarm_node_external_ip:
-    value: {get_attr: [swarm_node_floating, floating_ip_address]}
+    value: {get_attr: [swarm-node, networks, {get_param: external_network}, 0]}
     description: >
       This is the "public" address of the Swarm node.
+

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+. /etc/sysconfig/heat-params
+
 cat > /etc/systemd/system/swarm-manager.service << END_SERVICE_TOP
 [Unit]
 Description=Swarm Manager
@@ -21,7 +23,7 @@ ExecStart=/usr/bin/docker run --name swarm-manager \\
                               swarm:$SWARM_VERSION \\
                               manage -H tcp://0.0.0.0:2375 \\
                               --replication \\
-                              --advertise $NODE_IP:2376 \\
+                              --advertise $SWARM_NODE_IP:2376 \\
 END_SERVICE_TOP
 
 if [ $TLS_DISABLED = 'False'  ]; then

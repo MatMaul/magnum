@@ -16,6 +16,7 @@
 
 import json
 import os
+import socket
 import subprocess
 
 import requests
@@ -66,15 +67,13 @@ def create_dirs():
 
 
 def _get_public_ip():
-    return requests.get(PUBLIC_IP_URL).text
-
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(('8.8.8.8', 0))  # connecting to a UDP address doesn't send packets
+    return s.getsockname()[0]
 
 def _build_subject_alt_names(config):
     subject_alt_names = [
         'IP:%s' % _get_public_ip(),
-        'IP:%s' % config['API_IP_ADDRESS'],
-        'IP:%s' % config['SWARM_NODE_IP'],
-        'IP:%s' % config['SWARM_API_IP'],
         'IP:127.0.0.1'
     ]
     return ','.join(subject_alt_names)
